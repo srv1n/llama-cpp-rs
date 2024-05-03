@@ -20,8 +20,8 @@ use llama_cpp_2::ggml_time_us;
 use llama_cpp_2::llama_backend::LlamaBackend;
 use llama_cpp_2::llama_batch::LlamaBatch;
 use llama_cpp_2::model::params::LlamaModelParams;
-use llama_cpp_2::model::{AddBos, Special};
 use llama_cpp_2::model::LlamaModel;
+use llama_cpp_2::model::{AddBos, Special};
 
 #[derive(clap::Parser, Debug, Clone)]
 struct Args {
@@ -106,6 +106,8 @@ fn main() -> Result<()> {
 
     // initialize the context
     let ctx_params = LlamaContextParams::default()
+        .with_n_batch(2048)
+        .with_n_ubatch(2048)
         .with_n_threads_batch(std::thread::available_parallelism()?.get() as u32)
         .with_embeddings(true);
 
@@ -153,7 +155,7 @@ fn main() -> Result<()> {
 
     // create a llama_batch with the size of the context
     // we use this object to submit token data for decoding
-    let mut batch = LlamaBatch::new(n_ctx, 1);
+    let mut batch = LlamaBatch::new(2048, 1);
 
     let mut max_seq_id_batch = 0;
     let mut output = Vec::with_capacity(tokens_lines_list.len());
@@ -162,7 +164,7 @@ fn main() -> Result<()> {
 
     for tokens in &tokens_lines_list {
         // Flush the batch if the next prompt would exceed our batch size
-        if (batch.n_tokens() as usize + tokens.len()) > n_ctx {
+        if (batch.n_tokens() as usize + tokens.len()) > 2048 {
             batch_decode(
                 &mut ctx,
                 &mut batch,
